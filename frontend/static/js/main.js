@@ -5,11 +5,11 @@ let isLoading = false;
 let hasMessages = false;
 let selectedModel = 'groq';
 let dropdownOpen = false;
-let lastQuestion = '';
+let lastQuestion = ''; // Store last question for retry
 
 // Timer tracking for cold start detection
 let lastActivityTime = Date.now();
-const idleThreshold = 300000; // 5 minutes
+const idleThreshold = 300000; // 5 minutes in ms (servers sleep after ~5 min)
 
 // Pipeline steps for custom model loading animation
 const PIPELINE_STEPS = [
@@ -38,6 +38,7 @@ const sendBtn = document.getElementById('send-btn');
 const loadingVideo = document.getElementById('loading-video');
 const customToast = document.getElementById('custom-toast');
 
+// Track if toast has been shown
 let toastShown = false;
 
 // =============================================================================
@@ -75,6 +76,7 @@ function selectModel(model) {
         checkGroq.style.display = 'none';
         checkCustom.style.display = 'inline';
         
+        // Show toast only once per page load
         if (!toastShown) {
             showCustomToast();
             toastShown = true;
@@ -88,12 +90,14 @@ function showCustomToast() {
     customToast.classList.add('toast--visible');
     customToast.classList.remove('toast--fading');
     
+    // Stay visible for 5 seconds, then fade out over 3 seconds
     setTimeout(() => {
         customToast.classList.remove('toast--visible');
         customToast.classList.add('toast--fading');
     }, 5000);
 }
 
+// Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
     const selector = document.getElementById('model-selector');
     if (dropdownOpen && !selector.contains(e.target)) {
@@ -150,9 +154,12 @@ function hideSuggestedButtons(q) {
 // =============================================================================
 function retryLastQuestion() {
     if (lastQuestion && !isLoading) {
+        // Remove the error message
         const errorMessages = document.querySelectorAll('.message--error');
         errorMessages.forEach(msg => msg.remove());
-        sendQuestion(lastQuestion, true);
+        
+        // Retry the question
+        sendQuestion(lastQuestion, true); // true = isRetry
     }
 }
 
@@ -161,7 +168,7 @@ function retryLastQuestion() {
 // =============================================================================
 async function ensureBackendAwake() {
     const maxAttempts = 10;
-    const retryDelay = 2000;
+    const retryDelay = 2000; // 2 seconds between retries
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
@@ -176,6 +183,7 @@ async function ensureBackendAwake() {
                 return { success: true };
             }
         } catch (e) {
+            // Backend still waking up, wait and retry
             if (attempt < maxAttempts) {
                 await new Promise(r => setTimeout(r, retryDelay));
             }
@@ -193,6 +201,7 @@ async function ensureBackendAwake() {
 async function sendQuestion(question, isRetry = false) {
     if (isLoading) return;
     
+    // Store for retry
     lastQuestion = question;
     
     if (!isRetry) {
@@ -212,8 +221,10 @@ async function sendQuestion(question, isRetry = false) {
     setLoading(true);
     playVideo();
     
+    // Always check backend health first
     const isIdle = (Date.now() - lastActivityTime) > idleThreshold;
     
+    // Show appropriate loading indicator for health check
     let loadingEl = isIdle 
         ? addWakeUpLoadingIndicator() 
         : addHealthCheckLoadingIndicator();
@@ -227,16 +238,18 @@ async function sendQuestion(question, isRetry = false) {
         return;
     }
     
+    // Health check passed, now show query loading indicator
     loadingEl.remove();
     loadingEl = selectedModel === 'groq' 
         ? addGroqLoadingIndicator() 
         : addCustomLoadingIndicator();
     
+    // Determine timeout based on model
     let timeout;
     if (selectedModel === 'groq') {
-        timeout = 30000;
+        timeout = 30000; // 30 seconds for Groq
     } else {
-        timeout = 180000;
+        timeout = 180000; // 3 min for custom model
     }
 
     try {
@@ -259,6 +272,7 @@ async function sendQuestion(question, isRetry = false) {
         stopPipelineAnimation();
 
         if (response.ok) {
+            // Update activity time on success
             lastActivityTime = Date.now();
             addMessage('ai', data.answer, data.response_time_ms, data.suggested_question, data.model_used);
         } else {
@@ -348,7 +362,7 @@ function addCustomLoadingIndicator() {
 }
 
 function startDots() {
-    stopDots();
+    stopDots(); // Clear any existing interval first
     let count = 0;
     dotsInterval = setInterval(() => {
         const el = document.querySelector('.loading__dots');
@@ -370,6 +384,7 @@ function startPipelineAnimation() {
     pipelineInterval = setInterval(() => {
         elapsed += 1000;
         
+        // Find current step based on elapsed time
         let totalDuration = 0;
         for (let i = 0; i < PIPELINE_STEPS.length; i++) {
             totalDuration += PIPELINE_STEPS[i].duration * 1000;
@@ -382,6 +397,7 @@ function startPipelineAnimation() {
             }
         }
         
+        // Loop back if we've gone through all steps
         if (elapsed >= totalDuration) {
             elapsed = 0;
             pipelineStepIndex = 0;
@@ -458,6 +474,7 @@ function addMessage(type, content, responseTime = null, suggestedQuestion = null
             pauseVideo();
         });
     } else if (type === 'error') {
+        // Check if showRetry is passed (3rd param for error type)
         const showRetry = responseTime === true;
         
         let innerHTML = `<div class="message__content">${escapeHtml(content)}</div>`;
@@ -540,7 +557,7 @@ const chatContainer = document.getElementById('chat');
 const inputForm = document.getElementById('input-form');
 
 let startupDotsInterval = null;
-const maxCheckTime = 30000;
+const maxCheckTime = 30000; // 30 seconds for cold start
 
 function startStartupDots() {
     let count = 0;
@@ -575,7 +592,7 @@ async function checkBackendAvailability() {
                 startupScreen.style.display = 'none';
                 chatContainer.style.display = 'flex';
                 inputForm.style.display = 'flex';
-                lastActivityTime = Date.now();
+                lastActivityTime = Date.now(); // Server is awake
                 return;
             }
         } catch { 

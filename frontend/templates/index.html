@@ -11,7 +11,7 @@
 <body>
     <div class="app">
         <header class="header">
-            <!-- Model Selector -->
+            <!-- Model Selector (top-left, aligned with title) -->
             <div class="model-selector" id="model-selector">
                 <button class="model-selector__button" id="model-selector-btn" onclick="toggleModelDropdown(event)">
                     <span class="model-selector__label" id="selected-model-label">Groq API</span>
@@ -40,6 +40,18 @@
                 <div class="header__text">
                     <h1>Quantum Compute Chat</h1>
                     <p class="header__subtitle">Powered by Custom 140M Model + Groq API</p>
+                </div>
+                </div>
+                <div class="header__links">
+                    <a href="https://github.com/perez-eduardo/Quantum-Computing-Chat" target="_blank" class="header__link">
+                        <i class="fa-brands fa-github"></i> GitHub
+                    </a>
+                    <a href="#" class="header__link" onclick="openModal('models-modal'); return false;">
+                        <i class="fa-solid fa-microchip"></i> Models
+                    </a>
+                    <a href="#" class="header__link" onclick="openModal('about-modal'); return false;">
+                        <i class="fa-solid fa-circle-info"></i> About
+                    </a>
                 </div>
             </div>
             <div class="header__links">
@@ -71,7 +83,7 @@
         </div>
 
         <div class="chat" id="chat" style="display: none;">
-            <!-- Toast notification -->
+            <!-- Toast notification for custom model -->
             <div class="toast" id="custom-toast">
                 <i class="fa-solid fa-hourglass-half"></i>
                 <div>
@@ -128,7 +140,7 @@
                 <div class="modal__model-card">
                     <div class="modal__model-header">
                         <i class="fa-solid fa-bolt modal__model-icon modal__model-icon--groq"></i>
-                        <h3>Groq API (Llama 3.3 70B)</h3>
+                        <h3>Groq (Llama 3.3 70B)</h3>
                     </div>
                     <ul class="modal__list">
                         <li><strong>Response time:</strong> 2-3 seconds</li>
@@ -142,7 +154,7 @@
                 <div class="modal__model-card">
                     <div class="modal__model-header">
                         <i class="fa-solid fa-brain modal__model-icon modal__model-icon--custom"></i>
-                        <h3>Custom Model (QuantumLLM 140M)</h3>
+                        <h3>Custom (QuantumLLM 140M)</h3>
                     </div>
                     <ul class="modal__list">
                         <li><strong>Response time:</strong> 30-60 seconds</li>
