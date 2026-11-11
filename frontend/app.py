@@ -12,6 +12,26 @@ app = Flask(__name__)
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
+def backend_response(response):
+    """Keep upstream failures useful even when the backend does not return JSON."""
+    try:
+        data = response.json()
+    except ValueError:
+        logger.error("Backend returned non-JSON response (HTTP %s)", response.status_code)
+        return jsonify({
+            "error": "Backend returned an invalid response. Check the backend logs."
+        }), 502
+
+    if not isinstance(data, dict):
+        return jsonify({"error": "Backend returned an invalid response."}), 502
+    if not response.ok:
+        message = data.get("error") or data.get("detail")
+        if not isinstance(message, str):
+            message = "Backend could not process the request."
+        return jsonify({"error": message}), response.status_code
+    return jsonify(data), response.status_code
+
+
 @app.route("/")
 def index():
     """Serve main page."""
@@ -27,14 +47,14 @@ def query():
             json=request.get_json(),
             timeout=300
         )
-        return jsonify(response.json()), response.status_code
+        return backend_response(response)
     except requests.Timeout:
         return jsonify({"error": "Request timed out. Please try again."}), 504
     except requests.ConnectionError:
         return jsonify({"error": "Cannot connect to backend."}), 503
-    except Exception as e:
-        logger.error(f"Query error: {e}")
-        return jsonify({"error": str(e)}), 500
+    except requests.RequestException:
+        logger.exception("Backend query request failed")
+        return jsonify({"error": "Backend request failed. Please try again."}), 502
 
 
 @app.route("/api/health", methods=["GET"])
@@ -42,7 +62,7 @@ def api_health():
     """Proxy health check to backend."""
     try:
         response = requests.get(f"{BACKEND_URL}/health", timeout=5)
-        return jsonify(response.json()), response.status_code
+        return backend_response(response)
     except Exception as e:
         logger.error(f"Health check error: {e}")
         return jsonify({"error": "Backend unavailable"}), 503

@@ -6,12 +6,7 @@ from dotenv import load_dotenv
 
 # Load .env from project root (parent of backend/)
 env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(env_path, override=True)
-
-# Debug prints (remove after testing)
-print(f"ENV PATH: {env_path}")
-print(f"ENV EXISTS: {env_path.exists()}")
-print(f"VOYAGE KEY: '{os.getenv('VOYAGE_API_KEY')}'")
+load_dotenv(env_path)
 
 # Required
 VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY")
@@ -22,7 +17,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 MODAL_URL = os.getenv("MODAL_URL", "")
 
 # Groq settings
-GROQ_MODEL_NAME = "llama-3.3-70b-versatile"
+GROQ_MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "openai/gpt-oss-120b")
 GROQ_TEMPERATURE = 0.2
 GROQ_MAX_TOKENS = 300
 

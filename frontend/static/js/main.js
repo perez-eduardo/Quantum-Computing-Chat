@@ -267,16 +267,19 @@ async function sendQuestion(question, isRetry = false) {
         });
         
         clearTimeout(timeoutId);
-        const data = await response.json();
+        const data = await response.json().catch(() => ({
+            error: 'The server returned an invalid response. Please try again.'
+        }));
         loadingEl.remove();
         stopPipelineAnimation();
 
-        if (response.ok) {
+        if (response.ok && typeof data?.answer === 'string') {
             // Update activity time on success
             lastActivityTime = Date.now();
             addMessage('ai', data.answer, data.response_time_ms, data.suggested_question, data.model_used);
         } else {
-            addMessage('error', data.error || 'Something went wrong.', true);
+            const message = data?.error || data?.detail;
+            addMessage('error', typeof message === 'string' ? message : 'The server could not answer your question. Please try again.', true);
         }
     } catch (error) {
         loadingEl.remove();

@@ -48,6 +48,37 @@ python app.py
 
 Visit http://localhost:3000
 
+On Windows PowerShell, you can install both services into one local environment
+from the repository root:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r backend/requirements.txt -r frontend/requirements.txt
+Copy-Item .env.example .env
+# Fill in .env with your service credentials before starting the backend.
+.\.venv\Scripts\python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
+```
+
+Then start the frontend in a second terminal from the repository root:
+
+```powershell
+.\.venv\Scripts\python -m flask --app frontend.app run --host 127.0.0.1 --port 3000
+```
+
+### Troubleshooting query errors
+
+The frontend `/health` endpoint only checks the frontend process. Use
+`/api/health` to check backend connectivity. Query failures identify retrieval
+or model service errors; the backend logs contain the underlying exception.
+Non-JSON backend responses return a readable gateway error instead of a JSON
+parsing exception.
+
+Run the error-handling regression tests from the repository root:
+
+```powershell
+.\.venv\Scripts\python -m unittest discover -s tests -v
+```
+
 ## Project Structure
 
 ```

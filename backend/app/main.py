@@ -159,7 +159,14 @@ async def query(request: QueryRequest):
     start = time.time()
     
     # Retrieve context
-    results = retriever.search(request.question, top_k=5)
+    try:
+        results = retriever.search(request.question, top_k=5)
+    except Exception:
+        logger.exception("Context retrieval failed")
+        raise HTTPException(
+            status_code=503,
+            detail="Knowledge retrieval is unavailable. Check the backend logs for Voyage AI or database errors."
+        ) from None
     if not results:
         raise HTTPException(status_code=404, detail="No relevant context found")
     
@@ -175,10 +182,21 @@ async def query(request: QueryRequest):
         model_used = "custom"
     else:
         logger.info("Using Groq")
-        llm = get_groq()
+        try:
+            llm = get_groq()
+        except Exception:
+            logger.exception("Groq client initialization failed")
+            raise HTTPException(status_code=502, detail="Groq is unavailable. Check the backend configuration.") from None
         model_used = "groq"
     
-    answer = llm.generate(context, request.question)
+    try:
+        answer = llm.generate(context, request.question)
+    except Exception:
+        logger.exception("Answer generation failed (%s)", model_used)
+        raise HTTPException(
+            status_code=502,
+            detail="Answer generation failed. Check the backend logs for model service errors."
+        ) from None
     suggested = get_suggested_question(request.question, answer, results)
     elapsed_ms = int((time.time() - start) * 1000)
     
